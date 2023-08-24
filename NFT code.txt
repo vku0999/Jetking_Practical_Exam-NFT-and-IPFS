@@ -1,0 +1,94 @@
+ Q - Write a Solidity Smart Contract for a Complete ERC721
+Smart Contract where you can perform Minting the NFT
+by paying in Ethers, Limiting the supply of NFT’s,
+Allowing list functionality, Modifying the Minting
+functionality, Withdrawing functionality, and, clean up
+code by using internalMint() function.
+
+Answers - 
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract CustomNFT is ERC721Enumerable, Ownable {
+    using SafeMath for uint256;
+
+    // Maximum supply of NFTs
+    uint256 public maxSupply;
+    
+    // Current NFT token ID
+    uint256 private tokenIdCounter;
+
+    // Whitelist mapping
+    mapping(address => bool) private whitelist;
+
+    // Base URI for metadata
+    string private baseTokenURI;
+
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint256 _maxSupply,
+        string memory _baseTokenURI
+    ) ERC721(_name, _symbol) {
+        maxSupply = _maxSupply;
+        baseTokenURI = _baseTokenURI;
+    }
+
+    // Set base URI for metadata
+    function setBaseURI(string memory _newBaseURI) external onlyOwner {
+        baseTokenURI = _newBaseURI;
+    }
+
+    // Mint NFTs
+    function mintNFT(uint256 _amount) external payable {
+        require(_amount > 0, "Amount should be greater than 0");
+        require(totalSupply().add(_amount) <= maxSupply, "Exceeds max supply");
+        require(msg.value >= _amount * 0.01 ether, "Insufficient Ether");
+
+        for (uint256 i = 0; i < _amount; i++) {
+            internalMint(msg.sender);
+        }
+    }
+
+    // Internal mint function
+    function internalMint(address _to) internal {
+        require(tokenIdCounter <= maxSupply, "Exceeds max supply");
+        tokenIdCounter++;
+        _mint(_to, tokenIdCounter);
+    }
+
+    // Add or remove addresses from the whitelist
+    function updateWhitelist(address[] calldata _addresses, bool _status) external onlyOwner {
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            whitelist[_addresses[i]] = _status;
+        }
+    }
+
+    // Mint NFTs for whitelisted addresses
+    function mintForWhitelist(address[] calldata _addresses) external onlyOwner {
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            require(whitelist[_addresses[i]], "Address not whitelisted");
+            internalMint(_addresses[i]);
+        }
+    }
+
+    // Withdraw Ether from the contract
+    function withdraw() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
+    }
+
+    // Override _baseURI function
+    function _baseURI() internal view override returns (string memory) {
+        return baseTokenURI;
+    }
+
+    // Get whitelist status of an address
+    function isWhitelisted(address _address) external view returns (bool) {
+        return whitelist[_address];
+    }
+}
+
+I've used the OpenZeppelin library for the ERC721 implementation. Make sure to replace "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol" and "@openzeppelin/contracts/access/Ownable.sol" with the actual import paths depending on your setup. 
